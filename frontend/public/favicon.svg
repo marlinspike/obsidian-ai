@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Obsidian AI favicon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#13152b"/>
+      <stop offset="100%" stop-color="#0a0c1a"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#95adff"/>
+      <stop offset="100%" stop-color="#5b7cff"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)"/>
+  <rect x="4.5" y="4.5" width="55" height="55" rx="13.5" fill="none" stroke="#2b3358"/>
+
+  <path d="M32 16l3.2 9.8L45 29l-9.8 3.2L32 42l-3.2-9.8L19 29l9.8-3.2L32 16z" fill="url(#spark)"/>
+  <path d="M45.5 15l1.6 4.9 4.9 1.6-4.9 1.6-1.6 4.9-1.6-4.9-4.9-1.6 4.9-1.6 1.6-4.9z" fill="#9ab0ff" opacity="0.95"/>
+</svg>
