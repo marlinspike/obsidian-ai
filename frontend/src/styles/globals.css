@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 250 245 255;
+    --foreground: 17 24 39;
+    --card: 255 255 255;
+    --card-foreground: 17 24 39;
+    --border: 229 231 235;
+    --input: 229 231 235;
+    --primary: 124 58 237;
+    --primary-foreground: 255 255 255;
+    --secondary: 243 244 246;
+    --secondary-foreground: 55 65 81;
+    --muted: 249 250 251;
+    --muted-foreground: 107 114 128;
+    --accent: 237 233 254;
+    --accent-foreground: 109 40 217;
+  }
+
+  .dark {
+    --background: 17 17 27;
+    --foreground: 250 250 250;
+    --card: 30 30 46;
+    --card-foreground: 250 250 250;
+    --border: 55 55 75;
+    --input: 55 55 75;
+    --primary: 167 139 250;
+    --primary-foreground: 17 17 27;
+    --secondary: 45 45 65;
+    --secondary-foreground: 200 200 220;
+    --muted: 40 40 56;
+    --muted-foreground: 140 140 160;
+    --accent: 88 74 163;
+    --accent-foreground: 237 233 254;
+  }
+
+  body {
+    @apply bg-[rgb(var(--background))] text-[rgb(var(--foreground))] antialiased transition-colors duration-200;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2.5 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+  }
+
+  .btn-primary {
+    @apply btn bg-obsidian-600 text-white hover:bg-obsidian-700 focus:ring-obsidian-500 shadow-lg shadow-obsidian-500/25 hover:shadow-xl hover:shadow-obsidian-500/30
+           dark:bg-obsidian-500 dark:hover:bg-obsidian-400 dark:shadow-obsidian-500/20;
+  }
+
+  .btn-secondary {
+    @apply btn bg-[rgb(var(--secondary))] text-[rgb(var(--secondary-foreground))] hover:bg-gray-300 focus:ring-gray-500
+           dark:hover:bg-[rgb(55,55,75)];
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-[rgb(var(--muted-foreground))] hover:bg-[rgb(var(--muted))] hover:text-[rgb(var(--foreground))] focus:ring-gray-500;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-4 py-3 text-[rgb(var(--foreground))] placeholder:text-[rgb(var(--muted-foreground))] focus:border-obsidian-500 focus:outline-none focus:ring-2 focus:ring-obsidian-500/20 transition-all duration-200;
+  }
+
+  .card {
+    @apply rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] shadow-sm transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-lg hover:border-obsidian-200 dark:hover:border-obsidian-700;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in;
+  }
+
+  .modal-content {
+    @apply bg-[rgb(var(--card))] rounded-2xl shadow-2xl w-full max-w-lg animate-slide-up border border-[rgb(var(--border))];
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-obsidian-100 text-obsidian-700 dark:bg-obsidian-900/50 dark:text-obsidian-300;
+  }
+
+  .badge-success {
+    @apply badge bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300;
+  }
+
+  .badge-warning {
+    @apply badge bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Markdown content styling */
+.markdown-content {
+  @apply text-[rgb(var(--foreground))] leading-relaxed;
+}
+
+.markdown-content p {
+  @apply mb-4 last:mb-0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  @apply mb-4 pl-6 space-y-1;
+}
+
+.markdown-content li {
+  @apply relative;
+}
+
+.markdown-content ul li::before {
+  content: "";
+  @apply absolute left-[-1rem] top-[0.6rem] w-1.5 h-1.5 rounded-full bg-obsidian-400;
+}
+
+.markdown-content ol {
+  @apply list-decimal;
+}
+
+.markdown-content pre {
+  @apply bg-[rgb(var(--muted))] rounded-xl p-4 overflow-x-auto mb-4 border border-[rgb(var(--border))];
+}
+
+.markdown-content code {
+  @apply bg-[rgb(var(--muted))] rounded-md px-1.5 py-0.5 text-sm font-mono text-obsidian-600 dark:text-obsidian-400;
+}
+
+.markdown-content pre code {
+  @apply bg-transparent p-0 text-[rgb(var(--foreground))];
+}
+
+.markdown-content strong {
+  @apply font-semibold text-[rgb(var(--foreground))];
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  @apply font-semibold text-[rgb(var(--foreground))] mt-6 mb-3 first:mt-0;
+}
+
+.markdown-content h1 {
+  @apply text-xl;
+}
+
+.markdown-content h2 {
+  @apply text-lg;
+}
+
+.markdown-content h3 {
+  @apply text-base;
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-obsidian-400 pl-4 italic text-[rgb(var(--muted-foreground))] my-4;
+}
+
+.markdown-content a {
+  @apply text-obsidian-600 dark:text-obsidian-400 hover:underline;
+}
+
+/* Gradient backgrounds */
+.gradient-light {
+  background: linear-gradient(135deg, rgb(250, 245, 255) 0%, rgb(237, 233, 254) 50%, rgb(245, 243, 255) 100%);
+}
+
+.gradient-dark {
+  background: linear-gradient(135deg, rgb(17, 17, 27) 0%, rgb(30, 25, 50) 50%, rgb(17, 17, 27) 100%);
+}
+
+/* Selection */
+::selection {
+  @apply bg-obsidian-200 dark:bg-obsidian-800;
+}
+
+/* Focus visible */
+:focus-visible {
+  @apply outline-none ring-2 ring-obsidian-500 ring-offset-2 ring-offset-[rgb(var(--background))];
+}
