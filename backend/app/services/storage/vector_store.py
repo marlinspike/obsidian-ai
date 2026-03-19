@@ -94,24 +94,37 @@ class VectorStore:
         query_embedding: list[float],
         limit: int = 10,
         folder_filter: str | None = None,
+        folder_filters: list[str] | None = None,
     ) -> list[SearchResult]:
         """Search for similar chunks.
 
         Args:
             query_embedding: Query vector
             limit: Maximum results to return
-            folder_filter: Optional folder to filter by
+            folder_filter: Optional single folder to filter by (exact match)
+            folder_filters: Optional pre-expanded list of folder paths to filter by.
+                            Applied via ChromaDB $in so the limit applies within
+                            the filtered set rather than across the whole index.
 
         Returns:
             List of search results ordered by similarity
         """
         where: dict[str, Any] | None = None
-        if folder_filter:
+        if folder_filters:
+            if len(folder_filters) == 1:
+                where = {"folder": {"$eq": folder_filters[0]}}
+            else:
+                where = {"folder": {"$in": folder_filters}}
+        elif folder_filter:
             where = {"folder": folder_filter}
+
+        # ChromaDB raises if n_results exceeds collection size
+        count = self.collection.count()
+        n_results = min(limit, count) if count > 0 else 1
 
         results = self.collection.query(
             query_embeddings=[query_embedding],
-            n_results=limit,
+            n_results=n_results,
             where=where,
             include=["documents", "metadatas", "distances"],
         )

@@ -15,6 +15,13 @@ interface FolderNode {
   children: Map<string, FolderNode>;
 }
 
+function hasMatchingDescendant(node: FolderNode, searchTerm: string): boolean {
+  if (node.name.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+  return Array.from(node.children.values()).some(child =>
+    hasMatchingDescendant(child, searchTerm)
+  );
+}
+
 function buildFolderTree(folders: string[]): FolderNode {
   const root: FolderNode = { name: "", path: "", children: new Map() };
 
@@ -60,19 +67,15 @@ function FolderTreeNode({
   const isExpanded = expandedPaths.has(node.path);
   const isSelected = selectedFolders.includes(node.path);
 
-  // Check if any children match search
+  // Check if any descendants match search (recursive, any depth)
   const matchesSearch = searchTerm === "" ||
     node.name.toLowerCase().includes(searchTerm.toLowerCase());
 
   const childrenArray = Array.from(node.children.values());
-  const hasMatchingChildren = searchTerm !== "" && childrenArray.some(
-    child => child.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    Array.from(child.children.values()).some(c =>
-      c.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const hasMatchingDescendants = searchTerm !== "" &&
+    childrenArray.some(child => hasMatchingDescendant(child, searchTerm));
 
-  if (!matchesSearch && !hasMatchingChildren && searchTerm !== "") {
+  if (!matchesSearch && !hasMatchingDescendants && searchTerm !== "") {
     return null;
   }
 

@@ -45,18 +45,19 @@ def build_obsidian_url(vault_path: str, note_path: str) -> str:
 
 # System prompt for the LLM
 SYSTEM_PROMPT = """You are an AI assistant that helps users query their personal notes stored in Obsidian.
-You have access to relevant excerpts from the user's notes based on their question.
+You have access to relevant excerpts from the user's notes AND the folder/topic structure of the vault.
 
 Guidelines:
 1. Answer questions based primarily on the provided note excerpts
-2. If the notes don't contain relevant information, say so clearly
-3. Reference specific notes when citing information (use the note titles)
-4. Be concise but thorough
-5. If asked about people, meetings, or events, provide context from the notes
-6. If you notice patterns or connections across notes, mention them
-7. Always indicate which notes your answer is based on
+2. Use the Folder / Topic Structure section to answer structural questions (e.g. "how many customers?", "list all projects", "what topics are covered?") — each folder represents a distinct topic, project, or entity
+3. If the notes don't contain relevant information, say so clearly
+4. Reference specific notes when citing information (use the note titles)
+5. Be concise but thorough
+6. If asked about people, meetings, or events, provide context from the notes
+7. If you notice patterns or connections across notes, mention them
+8. Always indicate which notes or folders your answer is based on
 
-The user's notes are provided below in the context section."""
+The user's notes and folder structure are provided below in the context section."""
 
 
 def format_context(results: list[SearchResult]) -> str:
@@ -81,6 +82,49 @@ def format_context(results: list[SearchResult]) -> str:
         )
 
     return "\n".join(context_parts)
+
+
+def format_folder_context(
+    results: list[SearchResult],
+    notes_loader: NotesLoader,
+    selected_folders: list[str] | None = None,
+) -> str:
+    """Build folder structure context for the LLM.
+
+    When folder filters are selected, lists all sub-folders of those filters so
+    the LLM can answer structural questions (e.g. 'how many customers?').
+    Otherwise falls back to the unique folders appearing in search results.
+
+    Args:
+        results: Search results from vector store
+        notes_loader: Notes loader for filesystem folder enumeration
+        selected_folders: Optional folder filters from the request
+
+    Returns:
+        Formatted folder structure string, or empty string if nothing useful
+    """
+    if selected_folders:
+        all_folders = notes_loader.get_folders()
+        relevant_folders = [
+            f for f in all_folders
+            if any(
+                f == sel or f.startswith(sel + "/")
+                for sel in selected_folders
+            )
+        ]
+    else:
+        relevant_folders = sorted({r.folder for r in results if r.folder})
+
+    if not relevant_folders:
+        return ""
+
+    lines = ["=== Folder / Topic Structure (your notes vault hierarchy) ==="]
+    for folder in relevant_folders:
+        depth = folder.count("/")
+        indent = "  " * depth
+        name = folder.split("/")[-1]
+        lines.append(f"{indent}{name}  [{folder}]")
+    return "\n".join(lines)
 
 
 class QueryService:
@@ -109,6 +153,31 @@ class QueryService:
         self.llm_factory = llm_factory
         self.cost_tracker = cost_tracker
         self.model_router = ModelRouter(settings, llm_factory)
+
+    def _expand_folder_filters(self, folders: list[str]) -> list[str]:
+        """Expand selected folders to include all sub-folder paths.
+
+        ChromaDB doesn't support prefix matching, so we pre-expand the list of
+        all matching folder paths (exact + descendants) and pass it as $in.
+
+        Args:
+            folders: Selected folder filters from the request
+
+        Returns:
+            Flat list of all folder paths that are selected or descend from a
+            selected folder
+        """
+        all_folders = self.notes_loader.get_folders()
+        expanded = [
+            f for f in all_folders
+            if any(f == sel or f.startswith(sel + "/") for sel in folders)
+        ]
+        # Also include the selected folders themselves (they may not appear in
+        # get_folders() if they contain no notes at the top level)
+        for sel in folders:
+            if sel not in expanded:
+                expanded.append(sel)
+        return expanded
 
     async def query(self, request: QueryRequest) -> QueryResponse:
         """Execute a query and return the response.
@@ -139,38 +208,32 @@ class QueryService:
         query_embeddings, embed_tokens = await embedding_provider.embed([request.question])
         query_embedding = query_embeddings[0]
 
-        # Search for relevant chunks
-        # Get more results when filtering by folder to ensure we have enough after filtering
-        search_limit = request.max_sources * 4 if request.folders else request.max_sources * 2
+        # Expand folder filters so ChromaDB can apply them natively via $in.
+        # This ensures the search limit is applied within the selected folders
+        # rather than globally (which previously starved results for deep/niche folders).
+        expanded_folders = self._expand_folder_filters(request.folders) if request.folders else None
+
         results = self.vector_store.search(
             query_embedding,
-            limit=search_limit,
+            limit=request.max_sources * 2,
+            folder_filters=expanded_folders,
         )
 
-        # Filter by folders if specified (prefix matching to include subfolders)
-        if request.folders:
-            results = [
-                r for r in results
-                if any(
-                    r.folder == folder or r.folder.startswith(folder + "/")
-                    for folder in request.folders
-                )
-            ]
-
-        # Limit to requested max
         results = results[: request.max_sources]
 
         # Format context for LLM
         context = format_context(results)
+        folder_context = format_folder_context(results, self.notes_loader, request.folders)
 
         # Build prompt
+        folder_section = f"\n\n{folder_context}" if folder_context else ""
         prompt = f"""Context from your notes:
 
-{context}
+{context}{folder_section}
 
 Question: {request.question}
 
-Please answer based on the provided note excerpts. If the information isn't in the notes, say so."""
+Please answer based on the provided note excerpts and folder structure above. If the information isn't in the notes, say so."""
 
         # Get LLM response
         response = await provider.complete(
@@ -237,23 +300,14 @@ Please answer based on the provided note excerpts. If the information isn't in t
         query_embeddings, embed_tokens = await embedding_provider.embed([request.question])
         query_embedding = query_embeddings[0]
 
-        # Search for relevant chunks
-        # Get more results when filtering by folder to ensure we have enough after filtering
-        search_limit = request.max_sources * 4 if request.folders else request.max_sources * 2
+        # Expand folder filters so ChromaDB can apply them natively via $in.
+        expanded_folders = self._expand_folder_filters(request.folders) if request.folders else None
+
         results = self.vector_store.search(
             query_embedding,
-            limit=search_limit,
+            limit=request.max_sources * 2,
+            folder_filters=expanded_folders,
         )
-
-        # Filter by folders if specified (prefix matching to include subfolders)
-        if request.folders:
-            results = [
-                r for r in results
-                if any(
-                    r.folder == folder or r.folder.startswith(folder + "/")
-                    for folder in request.folders
-                )
-            ]
 
         results = results[: request.max_sources]
 
@@ -263,14 +317,16 @@ Please answer based on the provided note excerpts. If the information isn't in t
 
         # Format context for LLM
         context = format_context(results)
+        folder_context = format_folder_context(results, self.notes_loader, request.folders)
 
+        folder_section = f"\n\n{folder_context}" if folder_context else ""
         prompt = f"""Context from your notes:
 
-{context}
+{context}{folder_section}
 
 Question: {request.question}
 
-Please answer based on the provided note excerpts. If the information isn't in the notes, say so."""
+Please answer based on the provided note excerpts and folder structure above. If the information isn't in the notes, say so."""
 
         # Stream LLM response
         total_content = ""
